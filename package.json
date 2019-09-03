@@ -10,7 +10,9 @@
     "src",
     "cjs.js",
     "index.mjs",
-    "index.d.ts"
+    "index.d.ts",
+    "test/arbitraries.mjs",
+    "test/assertions.mjs"
   ],
   "repository": "https://github.com/fluture-js/Fluture.git",
   "scripts": {

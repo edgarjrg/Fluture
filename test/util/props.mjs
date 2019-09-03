@@ -2,9 +2,19 @@ import type from 'sanctuary-type-identifiers';
 import show from 'sanctuary-show';
 import jsc from 'jsverify';
 
-import {Future, resolve, reject, Par, seq} from '../../index.mjs';
-import {eq, error, throws} from '../util/util.mjs';
 import {ordinal} from '../../src/internal/const.mjs';
+import {eq, error, throws} from './util.mjs';
+import {
+  any,
+  anyFuture,
+  anyNonFuture,
+  anyParallel,
+  anyFunction,
+  anyResolvedFuture,
+  FutureArb,
+} from '../arbitraries.mjs';
+
+export * from '../arbitraries';
 
 export var array = jsc.array;
 export var nearray = jsc.nearray;
@@ -20,7 +30,10 @@ export var string = jsc.string;
 export var property = jsc.property;
 export var elements = jsc.elements;
 export var suchthat = jsc.suchthat;
-export var nil = elements([null, undefined]);
+
+export function _of (rarb){
+  return FutureArb(string, rarb);
+}
 
 export function f (x){
   return {f: x};
@@ -29,81 +42,6 @@ export function f (x){
 export function g (x){
   return {g: x};
 }
-
-function value (m){
-  return m._value;
-}
-
-function immediatelyResolve (x){
-  var m = Future(function (rej, res){ setImmediate(res, x) });
-  m._value = x;
-  return m;
-}
-
-function immediatelyReject (x){
-  var m = Future(function (rej){ setImmediate(rej, x) });
-  m._value = x;
-  return m;
-}
-
-export function AsyncResolvedFutureArb (arb){
-  return arb.smap(immediatelyResolve, value, show);
-}
-
-export function AsyncRejectedFutureArb (arb){
-  return arb.smap(immediatelyReject, value, show);
-}
-
-export function ResolvedFutureArb (arb){
-  return arb.smap(resolve, value, show);
-}
-
-export function RejectedFutureArb (arb){
-  return arb.smap(reject, value, show);
-}
-
-export function FutureArb (larb, rarb){
-  return oneof(
-    RejectedFutureArb(larb),
-    ResolvedFutureArb(rarb),
-    AsyncRejectedFutureArb(larb),
-    AsyncResolvedFutureArb(rarb)
-  );
-}
-
-export function _of (rarb){
-  return FutureArb(string, rarb);
-}
-
-export var {
-  any,
-  anyFuture,
-  anyRejectedFuture,
-  anyResolvedFuture,
-  anyNonFuture,
-  anyFunction,
-} = letrec(function (tie){
-  return {
-    anyRejectedFuture: oneof(AsyncRejectedFutureArb(tie('any')), RejectedFutureArb(tie('any'))),
-    anyResolvedFuture: oneof(AsyncResolvedFutureArb(tie('any')), ResolvedFutureArb(tie('any'))),
-    anyFuture: oneof(tie('anyRejectedFuture'), tie('anyResolvedFuture')),
-    anyFunction: fn(tie('any')),
-    anyNonFuture: oneof(
-      number,
-      string,
-      bool,
-      nil,
-      constant(error),
-      tie('anyFunction')
-    ),
-    any: oneof(
-      tie('anyNonFuture'),
-      tie('anyFuture')
-    )
-  };
-});
-
-export var anyParallel = anyFuture.smap(Par, seq, show);
 
 export var altArg = {
   name: 'have Alt implemented',
