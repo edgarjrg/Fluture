@@ -21,14 +21,17 @@ export var Cache = createInterpreter(1, 'cache', function Cache$interpret(rec, r
     case Crashed: rec(this._value); break;
     case Rejected: rej(this._value); break;
     case Resolved: res(this._value); break;
-    default: cancel = this._addToQueue(rec, rej, res); this.run();
+    default:
+      this._queue = [];
+      cancel = this._addToQueue(rec, rej, res);
+      this.run();
   }
 
   return cancel;
 });
 
 Cache.prototype._cancel = noop;
-Cache.prototype._queue = [];
+Cache.prototype._queue = null;
 Cache.prototype._queued = 0;
 Cache.prototype._value = undefined;
 Cache.prototype._state = Cold;
