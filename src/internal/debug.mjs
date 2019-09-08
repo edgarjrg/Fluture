@@ -1,7 +1,7 @@
 import {ordinal} from './const.mjs';
 import {cons} from './list.mjs';
 
-/* istanbul ignore next: non v8 compatibility */
+/* c8 ignore next */
 var captureStackTrace = Error.captureStackTrace || captureStackTraceFallback;
 var _debug = debugHandleNone;
 
@@ -43,9 +43,9 @@ export function debugCaptureApplicationContext(context, n, f){
 
 export function captureStackTraceFallback(x){
   var e = new Error;
-  /* istanbul ignore else: non v8 compatibility */
   if(typeof e.stack === 'string'){
     x.stack = x.name + '\n' + e.stack.split('\n').slice(1).join('\n');
+  /* c8 ignore next 3 */
   }else{
     x.stack = x.name;
   }

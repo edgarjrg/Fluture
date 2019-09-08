@@ -17,6 +17,7 @@ export var Cache = createInterpreter(1, 'cache', function Cache$interpret(rec, r
   var cancel = noop;
 
   switch(this._state){
+    /* c8 ignore next 4 */
     case Pending: cancel = this._addToQueue(rec, rej, res); break;
     case Crashed: rec(this._value); break;
     case Rejected: rej(this._value); break;

@@ -1,41 +1,29 @@
 import chai from 'chai';
 import {encase, map} from '../../index.mjs';
-import * as U from '../util/util.mjs';
+import {test, assertCrashed, assertRejected, assertResolved, assertValidFuture, error} from '../util/util.mjs';
 import {testFunction, functionArg, anyArg} from '../util/props.mjs';
 
 var expect = chai.expect;
 
-describe('encase()', function (){
+testFunction('encase', encase, [functionArg, anyArg], assertValidFuture);
 
-  testFunction('encase', encase, [functionArg, anyArg], U.assertValidFuture);
+test('resolves with the return value of the function', function (){
+  var actual = encase(function (x){ return x + 1 })(1);
+  return assertResolved(actual, 2);
+});
 
-  describe('#_interpret()', function (){
+test('rejects with the exception thrown by the function', function (){
+  var actual = encase(function (a){ throw a, error })(1);
+  return assertRejected(actual, error);
+});
 
-    it('resolves with the return value of the function', function (){
-      var actual = encase(function (x){ return x + 1 })(1);
-      return U.assertResolved(actual, 2);
-    });
+test('does not swallow errors from subsequent maps and such', function (){
+  var m = map(function (){ throw error })(encase(function (x){ return x })(1));
+  return assertCrashed(m, error);
+});
 
-    it('rejects with the exception thrown by the function', function (){
-      var actual = encase(function (a){ throw a, U.error })(1);
-      return U.assertRejected(actual, U.error);
-    });
-
-    it('does not swallow errors from subsequent maps and such', function (){
-      var m = map(function (){ throw U.error })(encase(function (x){ return x })(1));
-      return U.assertCrashed(m, U.error);
-    });
-
-  });
-
-  describe('#toString()', function (){
-
-    it('returns the code to create the Future', function (){
-      var f = function (a){ return void a };
-      var m = encase(f)(null);
-      expect(m.toString()).to.equal('encase (' + f.toString() + ') (null)');
-    });
-
-  });
-
+test('returns the code to create the Future when cast to String', function (){
+  var f = function (a){ return void a };
+  var m = encase(f)(null);
+  expect(m.toString()).to.equal('encase (' + f.toString() + ') (null)');
 });

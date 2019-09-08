@@ -33,7 +33,7 @@
   "overrides": [
     {
       "files": ["test/**"],
-      "env": {"node": true, "mocha": true},
+      "env": {"node": true},
       "globals": {"Promise": false},
       "rules": {
         "arrow-body-style": ["off"],

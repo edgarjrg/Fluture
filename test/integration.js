@@ -1,1 +1,0 @@
-import './integration/main.mjs';

@@ -2,74 +2,62 @@
 
 import chai from 'chai';
 import {attemptP, map, mapRej} from '../../index.mjs';
-import * as U from '../util/util.mjs';
+import {assertCrashed, assertRejected, assertResolved, assertValidFuture, error, failRej, failRes, noop, test} from '../util/util.mjs';
 import {testFunction, functionArg} from '../util/props.mjs';
 
 var expect = chai.expect;
 
-describe('attemptP()', function (){
+testFunction('encaseP', attemptP, [functionArg], assertValidFuture);
 
-  testFunction('encaseP', attemptP, [functionArg], U.assertValidFuture);
+test('crashes when the Promise generator throws', function (){
+  var m = attemptP(function (){ throw error });
+  return assertCrashed(m, error);
+});
 
-  describe('#_interpret()', function (){
+test('crashes when the Promise generator does not return a Promise', function (){
+  var m = attemptP(noop);
+  return assertCrashed(m, new TypeError(
+    'encaseP() expects the function it\'s given to return a Promise/Thenable\n' +
+    '  Actual: undefined\n' +
+    '  From calling: function (){}\n' +
+    '  With: undefined'
+  ));
+});
 
-    it('crashes when the Promise generator throws', function (){
-      var m = attemptP(function (){ throw U.error });
-      return U.assertCrashed(m, U.error);
-    });
+test('resolves with the resolution value of the returned Promise', function (){
+  var actual = attemptP(function (){ return Promise.resolve(1) });
+  return assertResolved(actual, 1);
+});
 
-    it('crashes when the Promise generator does not return a Promise', function (){
-      var m = attemptP(U.noop);
-      return U.assertCrashed(m, new TypeError(
-        'encaseP() expects the function it\'s given to return a Promise/Thenable\n' +
-        '  Actual: undefined\n' +
-        '  From calling: function (){}\n' +
-        '  With: undefined'
-      ));
-    });
+test('rejects with rejection reason of the returned Promise', function (){
+  var actual = attemptP(function (){ return Promise.reject(error) });
+  return assertRejected(actual, error);
+});
 
-    it('resolves with the resolution value of the returned Promise', function (){
-      var actual = attemptP(function (){ return Promise.resolve(1) });
-      return U.assertResolved(actual, 1);
-    });
+test('ensures no resolution happens after cancel', function (done){
+  var actual = attemptP(function (){ return Promise.resolve(1) });
+  actual._interpret(done, failRej, failRes)();
+  setTimeout(done, 20);
+});
 
-    it('rejects with rejection reason of the returned Promise', function (){
-      var actual = attemptP(function (){ return Promise.reject(U.error) });
-      return U.assertRejected(actual, U.error);
-    });
+test('ensures no rejection happens after cancel', function (done){
+  var actual = attemptP(function (){ return Promise.reject(1) });
+  actual._interpret(done, failRej, failRes)();
+  setTimeout(done, 20);
+});
 
-    it('ensures no resolution happens after cancel', function (done){
-      var actual = attemptP(function (){ return Promise.resolve(1) });
-      actual._interpret(done, U.failRej, U.failRes)();
-      setTimeout(done, 20);
-    });
+test('crashes with errors that occur in rejection continuation', function (){
+  var m = map(function (){ throw error })(attemptP(function (){ return Promise.resolve(1) }));
+  return assertCrashed(m, error);
+});
 
-    it('ensures no rejection happens after cancel', function (done){
-      var actual = attemptP(function (){ return Promise.reject(1) });
-      actual._interpret(done, U.failRej, U.failRes)();
-      setTimeout(done, 20);
-    });
+test('crashes with errors that occur in resolution continuation', function (){
+  var m = mapRej(function (){ throw error })(attemptP(function (){ return Promise.reject(1) }));
+  return assertCrashed(m, error);
+});
 
-    it('crashes with errors that occur in rejection continuation', function (){
-      var m = map(function (){ throw U.error })(attemptP(function (){ return Promise.resolve(1) }));
-      return U.assertCrashed(m, U.error);
-    });
-
-    it('crashes with errors that occur in resolution continuation', function (){
-      var m = mapRej(function (){ throw U.error })(attemptP(function (){ return Promise.reject(1) }));
-      return U.assertCrashed(m, U.error);
-    });
-
-  });
-
-  describe('#toString()', function (){
-
-    it('returns the code to create the Future', function (){
-      var f = function (){ return Promise.resolve(42) };
-      var m = attemptP(f);
-      expect(m.toString()).to.equal('encaseP (' + f.toString() + ') (undefined)');
-    });
-
-  });
-
+test('returns the code to create the Future when cast to String', function (){
+  var f = function (){ return Promise.resolve(42) };
+  var m = attemptP(f);
+  expect(m.toString()).to.equal('encaseP (' + f.toString() + ') (undefined)');
 });

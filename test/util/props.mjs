@@ -3,7 +3,7 @@ import show from 'sanctuary-show';
 import jsc from 'jsverify';
 
 import {Future, resolve, reject, Par, seq} from '../../index.mjs';
-import {eq, error, throws} from '../util/util.mjs';
+import {eq, error, throws, test} from '../util/util.mjs';
 import {ordinal} from '../../src/internal/const.mjs';
 
 export var array = jsc.array;
@@ -17,10 +17,16 @@ export var nat = jsc.nat;
 export var number = jsc.number;
 export var oneof = jsc.oneof;
 export var string = jsc.string;
-export var property = jsc.property;
 export var elements = jsc.elements;
 export var suchthat = jsc.suchthat;
 export var nil = elements([null, undefined]);
+
+export function property (name){
+  const args = Array.from(arguments).slice(1);
+  test(name, () => {
+    return jsc.assert(jsc.forall.apply(null, args));
+  });
+}
 
 export function f (x){
   return {f: x};
@@ -188,7 +194,7 @@ export function testFunction (name, func, args, assert){
   var validArbs = args.map(getValid);
   var validArgs = args.map(generateValid);
 
-  it('is a curried ' + args.length + '-ary function', function (){
+  test('is a curried ' + args.length + '-ary function', function (){
     eq(typeof func, 'function');
     eq(func.length, 1);
     validArgs.slice(0, -1).forEach(function (_, idx){

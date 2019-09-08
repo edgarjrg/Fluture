@@ -1,238 +1,190 @@
 import chai from 'chai';
-import {Future, cache, resolve, reject, after} from '../../index.mjs';
+import {Future, cache, resolve, reject, after, rejectAfter} from '../../index.mjs';
 import {Crashed, Rejected, Resolved} from '../../src/cache.mjs';
-import * as U from '../util/util.mjs';
+import {test, assertCrashed, assertRejected, assertResolved, assertValidFuture, error, noop, onceOrError} from '../util/util.mjs';
 import * as F from '../util/futures.mjs';
 import {testFunction, futureArg} from '../util/props.mjs';
 
 var expect = chai.expect;
 
-describe('cache()', function (){
+testFunction('cache', cache, [futureArg], assertValidFuture);
 
-  testFunction('cache', cache, [futureArg], U.assertValidFuture);
+test('interpret crashes if the underlying computation crashes', function (){
+  return assertCrashed(cache(F.crashed), error);
+});
 
-  describe('#_interpret()', function (){
+test('interpret resolves with the resolution value resolve the given Future', function (){
+  return assertResolved(cache(resolve(1)), 1);
+});
 
-    it('crashes if the underlying computation crashes', function (){
-      return U.assertCrashed(cache(F.crashed), U.error);
-    });
+test('interpret rejects with the rejection reason resolve the given Future', function (){
+  return assertRejected(cache(reject(error)), error);
+});
 
-    it('resolves with the resolution value resolve the given Future', function (){
-      return U.assertResolved(cache(resolve(1)), 1);
-    });
+test('interpret only interprets its given Future once', function (){
+  var m = cache(Future(onceOrError(function (rej, res){ return res(1) })));
+  m._interpret(noop, noop, noop);
+  m._interpret(noop, noop, noop);
+  return assertResolved(m, 1);
+});
 
-    it('rejects with the rejection reason resolve the given Future', function (){
-      return U.assertRejected(cache(reject(U.error)), U.error);
-    });
+test('interpret crashes all consumers once a delayed crash happens', function (){
+  var m = cache(F.crashedSlow);
+  var a = assertCrashed(m, error);
+  var b = assertCrashed(m, error);
+  var c = assertCrashed(m, error);
+  return Promise.all([a, b, c]);
+});
 
-    it('only interprets its given Future once', function (){
-      var m = cache(Future(U.onceOrError(function (rej, res){ return res(1) })));
-      m._interpret(U.noop, U.noop, U.noop);
-      m._interpret(U.noop, U.noop, U.noop);
-      return U.assertResolved(m, 1);
-    });
+test('interpret resolves all consumers once a delayed resolution happens', function (){
+  var m = cache(after(200)(1));
+  var a = assertResolved(m, 1);
+  var b = assertResolved(m, 1);
+  var c = assertResolved(m, 1);
+  return Promise.all([a, b, c]);
+});
 
-    it('crashes all consumers once a delayed crash happens', function (){
-      var m = cache(F.crashedSlow);
-      var a = U.assertCrashed(m, U.error);
-      var b = U.assertCrashed(m, U.error);
-      var c = U.assertCrashed(m, U.error);
-      return Promise.all([a, b, c]);
-    });
+test('interpret rejects all consumers once a delayed rejection happens', function (){
+  var m = cache(rejectAfter(20)(error));
+  var a = assertRejected(m, error);
+  var b = assertRejected(m, error);
+  var c = assertRejected(m, error);
+  return Promise.all([a, b, c]);
+});
 
-    it('resolves all consumers once a delayed resolution happens', function (){
-      var m = cache(after(20)(1));
-      var a = U.assertResolved(m, 1);
-      var b = U.assertResolved(m, 1);
-      var c = U.assertResolved(m, 1);
-      return Promise.all([a, b, c]);
-    });
+test('interpret crashes all new consumers after a crash happened', function (){
+  var m = cache(F.crashed);
+  m._interpret(noop, noop, noop);
+  return assertCrashed(m, error);
+});
 
-    it('rejects all consumers once a delayed rejection happens', function (){
-      var m = cache(Future(function (rej){ return void setTimeout(rej, 20, U.error) }));
-      var a = U.assertRejected(m, U.error);
-      var b = U.assertRejected(m, U.error);
-      var c = U.assertRejected(m, U.error);
-      return Promise.all([a, b, c]);
-    });
+test('interpret rejects all new consumers after a rejection happened', function (){
+  var m = cache(reject('err'));
+  m._interpret(noop, noop, noop);
+  return assertRejected(m, 'err');
+});
 
-    it('crashes all new consumers after a crash happened', function (){
-      var m = cache(F.crashed);
-      m._interpret(U.noop, U.noop, U.noop);
-      return U.assertCrashed(m, U.error);
-    });
+test('interpret it iinterpret nterprets the internal Future again when interpreted after having been cancelled', function (done){
+  var m = cache(Future(function (rej, res){
+    var o = {cancelled: false};
+    var id = setTimeout(res, 20, o);
+    return function (){ return (o.cancelled = true, clearTimeout(id)) };
+  }));
+  var clear = m._interpret(done, noop, noop);
+  setTimeout(function (){
+    clear();
+    m._interpret(done, noop, function (v){ return (expect(v).to.have.property('cancelled', false), done()) });
+  }, 10);
+});
 
-    it('rejects all new consumers after a rejection happened', function (){
-      var m = cache(reject('err'));
-      m._interpret(U.noop, U.noop, U.noop);
-      return U.assertRejected(m, 'err');
-    });
+test('interpret does not reset when one resolve multiple listeners is cancelled', function (done){
+  var m = cache(Future(function (rej, res){
+    setTimeout(res, 5, 1);
+    return function (){ return done(new Error('Reset happened')) };
+  }));
+  var cancel = m._interpret(done, noop, noop);
+  m._interpret(done, noop, noop);
+  cancel();
+  setTimeout(done, 20);
+});
 
-    it('it interprets the internal Future again when interpreted after having been cancelled', function (done){
-      var m = cache(Future(function (rej, res){
-        var o = {cancelled: false};
-        var id = setTimeout(res, 20, o);
-        return function (){ return (o.cancelled = true, clearTimeout(id)) };
-      }));
-      var clear = m._interpret(done, U.noop, U.noop);
-      setTimeout(function (){
-        clear();
-        m._interpret(done, U.noop, function (v){ return (expect(v).to.have.property('cancelled', false), done()) });
-      }, 10);
-    });
+test('interpret does not change when cancelled after settled', function (done){
+  var m = cache(Future(function (rej, res){
+    res(1);
+    return function (){ return done(new Error('Cancelled after settled')) };
+  }));
+  var cancel = m._interpret(done, noop, noop);
+  setTimeout(function (){
+    cancel();
+    done();
+  }, 5);
+});
 
-    it('does not reset when one resolve multiple listeners is cancelled', function (done){
-      var m = cache(Future(function (rej, res){
-        setTimeout(res, 5, 1);
-        return function (){ return done(new Error('Reset happened')) };
-      }));
-      var cancel = m._interpret(done, U.noop, U.noop);
-      m._interpret(done, U.noop, U.noop);
-      cancel();
-      setTimeout(done, 20);
-    });
+test('crash sets state to Crashed', function (){
+  var m = cache(Future(noop));
+  m.crash(1);
+  expect(m._state).to.equal(Crashed);
+});
 
-    it('does not change when cancelled after settled', function (done){
-      var m = cache(Future(function (rej, res){
-        res(1);
-        return function (){ return done(new Error('Cancelled after settled')) };
-      }));
-      var cancel = m._interpret(done, U.noop, U.noop);
-      setTimeout(function (){
-        cancel();
-        done();
-      }, 5);
-    });
+test('crash does nothing when state is resolved', function (){
+  var m = cache(Future(noop));
+  m.resolve(1);
+  m.crash(2);
+  expect(m._state).to.equal(Resolved);
+});
 
-  });
+test('resolve does nothing when state is rejected', function (){
+  var m = cache(Future(noop));
+  m.reject(1);
+  m.resolve(2);
+  expect(m._state).to.equal(Rejected);
+});
 
-  describe('#crash()', function (){
+test('reject does nothing when state is resolved', function (){
+  var m = cache(Future(noop));
+  m.resolve(1);
+  m.reject(2);
+  expect(m._state).to.equal(Resolved);
+});
 
-    it('sets state to Crashed', function (){
-      var m = cache(Future(U.noop));
-      m.crash(1);
-      expect(m._state).to.equal(Crashed);
-    });
+test('_addToQueue does nothing when state is settled', function (){
+  var m = cache(Future(noop));
+  m.resolve(1);
+  m._addToQueue(noop, noop);
+  expect(m._queued).to.equal(0);
+});
 
-    it('does nothing when state is resolved', function (){
-      var m = cache(Future(U.noop));
-      m.resolve(1);
-      m.crash(2);
-      expect(m._state).to.equal(Resolved);
-    });
+test('_drainQueue is idempotent', function (){
+  var m = cache(resolve(1));
+  m._drainQueue();
+  m._drainQueue();
+  m._interpret(noop, noop, noop);
+  m._drainQueue();
+  m._drainQueue();
+});
 
-  });
+test('run is idempotent', function (){
+  var m = cache(resolve(1));
+  m.run();
+  m.run();
+});
 
-  describe('#resolve()', function (){
+test('reset is idempotent', function (){
+  var m = cache(resolve(1));
+  m.reset();
+  m._interpret(noop, noop, noop);
+  m.reset();
+  m.reset();
+});
 
-    it('does nothing when state is rejected', function (){
-      var m = cache(Future(U.noop));
-      m.reject(1);
-      m.resolve(2);
-      expect(m._state).to.equal(Rejected);
-    });
+test('reset cancels the underlying computation', function (done){
+  var m = cache(Future(function (){ return function (){ done() } }));
+  m.run();
+  m.reset();
+});
 
-  });
+test('returns the code to create the Cache when cast to String', function (){
+  var m = cache(resolve(1));
+  var s = 'cache (resolve (1))';
+  expect(m.toString()).to.equal(s);
+});
 
-  describe('#reject()', function (){
+test('extractLeft returns empty array for cold Cacheds', function (){
+  expect(cache(reject(1)).extractLeft()).to.deep.equal([]);
+});
 
-    it('does nothing when state is resolved', function (){
-      var m = cache(Future(U.noop));
-      m.resolve(1);
-      m.reject(2);
-      expect(m._state).to.equal(Resolved);
-    });
+test('extractLeft returns array with reason for rejected Cacheds', function (){
+  var m = cache(reject(1));
+  m.run();
+  expect(m.extractLeft()).to.deep.equal([1]);
+});
 
-  });
+test('extractRight returns empty array for cold Cacheds', function (){
+  expect(cache(resolve(1)).extractRight()).to.deep.equal([]);
+});
 
-  describe('#_addToQueue()', function (){
-
-    it('does nothing when state is settled', function (){
-      var m = cache(Future(U.noop));
-      m.resolve(1);
-      m._addToQueue(U.noop, U.noop);
-      expect(m._queued).to.equal(0);
-    });
-
-  });
-
-  describe('#_drainQueue()', function (){
-
-    it('is idempotent', function (){
-      var m = cache(resolve(1));
-      m._drainQueue();
-      m._drainQueue();
-      m._interpret(U.noop, U.noop, U.noop);
-      m._drainQueue();
-      m._drainQueue();
-    });
-
-  });
-
-  describe('#run()', function (){
-
-    it('is idempotent', function (){
-      var m = cache(resolve(1));
-      m.run();
-      m.run();
-    });
-
-  });
-
-  describe('#reset()', function (){
-
-    it('is idempotent', function (){
-      var m = cache(resolve(1));
-      m.reset();
-      m._interpret(U.noop, U.noop, U.noop);
-      m.reset();
-      m.reset();
-    });
-
-    it('cancels the underlying computation', function (done){
-      var m = cache(Future(function (){ return function (){ done() } }));
-      m.run();
-      m.reset();
-    });
-
-  });
-
-  describe('#toString()', function (){
-
-    it('returns the code to create the Cache', function (){
-      var m = cache(resolve(1));
-      var s = 'cache (resolve (1))';
-      expect(m.toString()).to.equal(s);
-    });
-
-  });
-
-  describe('#extractLeft()', function (){
-
-    it('returns empty array for cold Cacheds', function (){
-      expect(cache(reject(1)).extractLeft()).to.deep.equal([]);
-    });
-
-    it('returns array with reason for rejected Cacheds', function (){
-      var m = cache(reject(1));
-      m.run();
-      expect(m.extractLeft()).to.deep.equal([1]);
-    });
-
-  });
-
-  describe('#extractRight()', function (){
-
-    it('returns empty array for cold Cacheds', function (){
-      expect(cache(resolve(1)).extractRight()).to.deep.equal([]);
-    });
-
-    it('returns array with value for resolved Cacheds', function (){
-      var m = cache(resolve(1));
-      m.run();
-      expect(m.extractRight()).to.deep.equal([1]);
-    });
-
-  });
-
+test('extractRight returns array with value for resolved Cacheds', function (){
+  var m = cache(resolve(1));
+  m.run();
+  expect(m.extractRight()).to.deep.equal([1]);
 });

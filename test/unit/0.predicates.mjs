@@ -1,95 +1,51 @@
 import chai from 'chai';
-import * as U from '../util/util.mjs';
+import {test, eq, noop} from '../util/util.mjs';
 import Future from '../../index.mjs';
 import * as util from '../../src/internal/predicates.mjs';
 
 var expect = chai.expect;
 
-describe('predicates', function (){
+test('isThenable', function (){
+  var ps = [
+    Promise.resolve(1),
+    new Promise(noop),
+    {then: noop},
+    {then: function (a){ return a }},
+    {then: function (a, b){ return b }}
+  ];
 
-  describe('.isThenable()', function (){
+  var values = [NaN, 1, true, undefined, null, [], {}];
+  var xs = values.concat([noop]).concat(values.map(function (x){ return ({then: x}) }));
 
-    var ps = [
-      Promise.resolve(1),
-      new Promise(U.noop),
-      {then: U.noop},
-      {then: function (a){ return a }},
-      {then: function (a, b){ return b }}
-    ];
+  ps.forEach(function (p){ return expect(util.isThenable(p)).to.equal(true) });
+  xs.forEach(function (x){ return expect(util.isThenable(x)).to.equal(false) });
+});
 
-    var values = [NaN, 1, true, undefined, null, [], {}];
-    var xs = values.concat([U.noop]).concat(values.map(function (x){ return ({then: x}) }));
+test('isFunction', function (){
+  var xs = [NaN, 1, true, undefined, null, [], {}];
+  eq(util.isFunction(function (){}), true);
+  eq(util.isFunction(Future), true);
+  xs.forEach(function (x){ return expect(util.isFunction(x)).to.equal(false) });
+});
 
-    it('returns true when given a Thenable', function (){
-      ps.forEach(function (p){ return expect(util.isThenable(p)).to.equal(true) });
-    });
+test('isUnsigned', function (){
+  var is = [1, 2, 99999999999999999999, Infinity];
+  var xs = [NaN, 0, -0, -1, -99999999999999999, -Infinity, '1', [], {}];
+  is.forEach(function (i){ return expect(util.isUnsigned(i)).to.equal(true) });
+  xs.forEach(function (x){ return expect(util.isUnsigned(x)).to.equal(false) });
+});
 
-    it('returns false when not given a Thenable', function (){
-      xs.forEach(function (x){ return expect(util.isThenable(x)).to.equal(false) });
-    });
+test('isObject', function (){
+  function O (){}
+  var os = [{}, {foo: 1}, Object.create(null), new O, []];
+  var xs = [1, true, NaN, null, undefined, ''];
+  os.forEach(function (i){ return expect(util.isObject(i)).to.equal(true) });
+  xs.forEach(function (x){ return expect(util.isObject(x)).to.equal(false) });
+});
 
-  });
-
-  describe('.isFunction()', function (){
-
-    var xs = [NaN, 1, true, undefined, null, [], {}];
-
-    it('returns true when given a Function', function (){
-      U.eq(util.isFunction(function (){}), true);
-      U.eq(util.isFunction(Future), true);
-    });
-
-    it('returns false when not given a Function', function (){
-      xs.forEach(function (x){ return expect(util.isFunction(x)).to.equal(false) });
-    });
-
-  });
-
-  describe('.isUnsigned()', function (){
-
-    var is = [1, 2, 99999999999999999999, Infinity];
-    var xs = [NaN, 0, -0, -1, -99999999999999999, -Infinity, '1', [], {}];
-
-    it('returns true when given a PositiveInteger', function (){
-      is.forEach(function (i){ return expect(util.isUnsigned(i)).to.equal(true) });
-    });
-
-    it('returns false when not given a PositiveInteger', function (){
-      xs.forEach(function (x){ return expect(util.isUnsigned(x)).to.equal(false) });
-    });
-
-  });
-
-  describe('.isObject()', function (){
-
-    function O (){}
-
-    var os = [{}, {foo: 1}, Object.create(null), new O, []];
-    var xs = [1, true, NaN, null, undefined, ''];
-
-    it('returns true when given an Object', function (){
-      os.forEach(function (i){ return expect(util.isObject(i)).to.equal(true) });
-    });
-
-    it('returns false when not given an Object', function (){
-      xs.forEach(function (x){ return expect(util.isObject(x)).to.equal(false) });
-    });
-
-  });
-
-  describe('.isIterator()', function (){
-
-    var is = [{next: function (){}}, {next: function (x){ return x }}, (function*(){}())];
-    var xs = [1, true, NaN, null, undefined, '', {}, {next: 1}];
-
-    it('returns true when given an Iterator', function (){
-      is.forEach(function (i){ return expect(util.isIterator(i)).to.equal(true) });
-    });
-
-    it('returns false when not given an Iterator', function (){
-      xs.forEach(function (x){ return expect(util.isIterator(x)).to.equal(false) });
-    });
-
-  });
-
+test('isIterator', function (){
+  var is = [{next: function (){}}, {next: function (x){ return x }}, (function*(){}())];
+  var xs = [1, true, NaN, null, undefined, '', {}, {next: 1}];
+  is.forEach(function (i){ return expect(util.isIterator(i)).to.equal(true) });
+  xs.forEach(function (x){ return expect(util.isIterator(x)).to.equal(false) });
 });

@@ -1,6 +1,6 @@
 export {default as show} from 'sanctuary-show';
 
-/* istanbul ignore next: non v8 compatibility */
+/* c8 ignore next */
 var setImmediate = typeof setImmediate === 'undefined' ? setImmediateFallback : setImmediate;
 
 export function noop(){}

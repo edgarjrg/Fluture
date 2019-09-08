@@ -1,12 +1,10 @@
 import {isFuture} from '../../index.mjs';
 import {property, anyFuture, anyNonFuture} from '../util/props.mjs';
 
-describe('isFuture()', function (){
-  property('returns true about Futures', anyFuture, function (value){
-    return isFuture(value) === true;
-  });
+property('returns true about Futures', anyFuture, function (value){
+  return isFuture(value) === true;
+});
 
-  property('returns false about everything else', anyNonFuture, function (value){
-    return isFuture(value) === false;
-  });
+property('returns false about everything else', anyNonFuture, function (value){
+  return isFuture(value) === false;
 });

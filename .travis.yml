@@ -1,8 +1,4 @@
 language: node_js
 node_js:
-  - "8"
-  - "9"
-  - "10"
-  - "11"
   - "12"
-after_success: npm run test:coverage && npm run coverage:upload
+after_success: npm run coverage:upload

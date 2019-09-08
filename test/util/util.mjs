@@ -1,9 +1,10 @@
+import oletus from 'oletus';
 import show from 'sanctuary-show';
 import type from 'sanctuary-type-identifiers';
 import {Future, isFuture, reject, resolve} from '../../index.mjs';
 import {crash} from '../../src/future.mjs';
 import {strictEqual, deepStrictEqual} from 'assert';
-export * from '../../src/internal/predicates';
+export * from '../../src/internal/predicates.mjs';
 
 export var STACKSIZE = (function r (){try{return 1 + r()}catch(e){return 1}}());
 export var noop = function (){};
@@ -17,6 +18,12 @@ export var T = function (x){ return function (f){ return f(x) } };
 export var error = new Error('Intentional error for unit testing');
 export var throwit = function (it){ throw it };
 export var throwing = function (){ throw error };
+
+export function test (name, impl){
+  oletus(name, () => (
+    impl.length === 0 ? impl() : new Promise((res, rej) => impl(e => e ? rej(e) : res()))
+  ));
+}
 
 export var eq = function eq (actual, expected){
   strictEqual(arguments.length, eq.length);
@@ -42,13 +49,17 @@ export var throws = function throws (f, expected){
 };
 
 export var itRaises = function itRaises (when, f, e){
-  var test = (typeof process.rawListeners === 'function') ? it : it.skip;
   test('raises ' + when, function (done){
     var listeners = process.rawListeners('uncaughtException');
     process.removeAllListeners('uncaughtException');
     process.once('uncaughtException', function (actual){
       listeners.forEach(function (f){ process.on('uncaughtException', f) });
-      eq(actual.message, e.message);
+      try {
+        eq(actual.message, e.message);
+      }catch(err){
+        done(err);
+        return;
+      }
       done();
     });
     f();
@@ -68,6 +79,15 @@ export var repeat = function (n, x){
   var out = new Array(n);
   while(n-- > 0){ out[n] = x } //eslint-disable-line
   return out;
+};
+
+export var promiseTimeout = function (t, p){
+  return Promise.race([
+    p,
+    new Promise((res, rej) => {
+      setTimeout(rej, t, new Error(`Timeout of ${t}ms reached`));
+    })
+  ]);
 };
 
 export var failRes = function (x){
@@ -112,8 +132,8 @@ var states = ['pending', 'crashed', 'rejected', 'resolved'];
 
 export function makeAssertEqual (equals){
   return function assertEqual (ma, mb){
-    var astate = 0, bstate = 0, val;
     return new Promise(function (pass, fail){
+      var astate = 0, bstate = 0, val;
       assertIsFuture(ma);
       assertIsFuture(mb);
 
