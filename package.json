@@ -29,7 +29,9 @@
     "test:coverage": "npm run clean && nyc --extension .mjs --include src mocha --require esm --ui bdd --reporter dot test/unit.js test/prop.js test/integration.js || true",
     "coverage:upload": "nyc report --exclude-after-remap=false --reporter=text-lcov > coverage.lcov && codecov",
     "coverage:report": "nyc report --exclude-after-remap=false --reporter=html",
-    "test:types": "tsc --lib es6 index.d.ts"
+    "test:types": "tsc --lib es6 index.d.ts",
+    "dtslint": "dtslint types",
+    "dtslint:watch": "nodemon --exec 'npm run dtslint' --watch ./types -e ts"
   },
   "author": "Aldwin Vlasblom <aldwin.vlasblom@gmail.com> (https://github.com/Avaq)",
   "homepage": "https://github.com/fluture-js/Fluture",
@@ -65,15 +67,19 @@
     "sanctuary-type-identifiers": "^2.0.0"
   },
   "devDependencies": {
+    "@types/ramda": "types/npm-ramda#dist",
     "chai": "^4.1.2",
     "codecov": "^3.0.0",
+    "dtslint": "^0.9.8",
     "es-check": "^5.0.0",
     "eslint": "^6.2.1",
     "eslint-config-warp": "^3.0.0",
     "esm": "^3.0.81",
     "fantasy-laws": "^1.0.1",
+    "fp-ts": "^2.0.5",
     "jsverify": "^0.8.3",
     "mocha": "^6.1.2",
+    "nodemon": "^1.19.2",
     "nyc": "^14.1.1",
     "ramda": "^0.26.1",
     "remark-cli": "^7.0.0",
@@ -85,6 +91,8 @@
     "sanctuary-benchmark": "^1.0.0",
     "sanctuary-either": "^1.1.0",
     "sanctuary-type-classes": "^11.0.0",
+    "ts-node": "^8.4.1",
+    "tsd": "^0.8.0",
     "typescript": "^3.0.3",
     "xyz": "github:davidchambers/xyz#340d089"
   }
