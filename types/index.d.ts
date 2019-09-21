@@ -106,9 +106,13 @@ declare module 'fluture' {
   export function chain<L, RA, RB>(mapper: (value: RA) => FutureInstance<L, RB>): (source: FutureInstance<L, RA>) => FutureInstance<L, RB>
   export function chain3<L, RA, RB>(mapper: (value: RA) => FutureInstance<L, RB>): (source: FutureInstance<L, RA>) => FutureInstance<L, RB>
   export function chain5<LB, RA, RB>(mapper: (value: RA) => FutureInstance<LB, RB>): <LA>(source: FutureInstance<LA, RA>) => FutureInstance<LA | LB, RB>
+  export function chain6<L = unknown, RA = unknown, RB = unknown>(mapper: (value: RA) => FutureInstance<L, RB>): (source: FutureInstance<L, RA>) => FutureInstance<L, RB>
+  export function chain7<RA = unknown, RB = unknown>(mapper: (value: RA) => FutureInstance<unknown, RB>): <LA = unknown>(source: FutureInstance<LA, RA>) => FutureInstance<LA, RB>
 
   /** Create a Future using the rejection reason of the given Future. See https://github.com/fluture-js/Fluture#chain */
   export function chainRej<LA, LB, R>(mapper: (reason: LA) => FutureInstance<LB, R>): (source: FutureInstance<LA, R>) => FutureInstance<LB, R>
+  export function chainRej6<LA = unknown, LB = unknown, R = unknown>(mapper: (reason: LA) => FutureInstance<LB, R>): (source: FutureInstance<LA, R>) => FutureInstance<LB, R>
+  export function chainRej7<LA = unknown, LB = unknown>(mapper: (reason: LA) => FutureInstance<LB, unknown>): <R = unknown>(source: FutureInstance<LA, R>) => FutureInstance<LB, R>
 
   /** Fork the given Future into a Node-style callback. See https://github.com/fluture-js/Fluture#done */
   export function done<L, R>(callback: Nodeback<L, R>): (source: FutureInstance<L, R>) => Cancel
@@ -130,6 +134,7 @@ declare module 'fluture' {
   export function fold2<LA, RB>(lmapper: (left: LA) => RB): <RA>(rmapper: (right: RA) => RB) => (source: FutureInstance<LA, RA>) => FutureInstance<undefined, RB>
   export function fold3<LA, RB>(lmapper: (left: LA) => RB): <RA>(rmapper: (right: RA) => RB) => (source: FutureInstance<LA, RA>) => FutureInstance<unknown, RB>
   export function fold4<LA, RB>(lmapper: (left: LA) => RB): <RA>(rmapper: (right: RA) => RB) => (source: FutureInstance<LA, RA>) => FutureInstance<never, RB>
+  export function fold6<LA = unknown, LB = unknown, RB = unknown>(lmapper: (left: LA) => RB): <RA>(rmapper: (right: RA) => RB) => (source: FutureInstance<LA, RA>) => FutureInstance<LB, RB>
 
   /** Fork the given Future into the given continuations. See https://github.com/fluture-js/Fluture#fork */
   export function fork<L, R>(reject: RejectFunction<L>): (resolve: ResolveFunction<R>) => (source: FutureInstance<L, R>) => Cancel
@@ -171,6 +176,7 @@ declare module 'fluture' {
   export function resolve<L, R>(value: R): FutureInstance<L, R>
   export function resolve3<R>(value: R): FutureInstance<unknown, R>
   export function resolve4<R>(value: R): FutureInstance<never, R>
+  export function resolve6<L = unknown, R = unknown>(value: R): FutureInstance<L, R>
 
   /** Run an Array of Futures in parallel, under the given concurrency limit. See https://github.com/fluture-js/Fluture#parallel */
   export function parallel<L, R>(concurrency: number): (futures: Array<FutureInstance<L, R>>) => FutureInstance<L, R[]>
@@ -185,6 +191,7 @@ declare module 'fluture' {
   export function reject<L, R>(reason: L): FutureInstance<L, R>
   export function reject3<L>(reason: L): FutureInstance<L, unknown>
   export function reject4<L>(reason: L): FutureInstance<L, never>
+  export function reject6<L, R = unknown>(reason: L): FutureInstance<L, R>
 
   /** Creates a Future which rejects after the given duration with the given reason. See https://github.com/fluture-js/Fluture#rejectafter */
   export function rejectAfter<L, R>(duration: number): (reason: L) => FutureInstance<L, R>

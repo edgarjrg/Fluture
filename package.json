@@ -31,7 +31,7 @@
     "coverage:report": "nyc report --exclude-after-remap=false --reporter=html",
     "test:types": "tsc --lib es6 index.d.ts",
     "dtslint": "dtslint types",
-    "dtslint:watch": "nodemon --exec 'npm run dtslint' --watch ./types -e ts"
+    "dtslint:watch": "nodemon --exec 'yarn run dtslint' --watch ./types -e ts"
   },
   "author": "Aldwin Vlasblom <aldwin.vlasblom@gmail.com> (https://github.com/Avaq)",
   "homepage": "https://github.com/fluture-js/Fluture",
